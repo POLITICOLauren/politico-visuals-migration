@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>POLITICO Visuals | Box to SharePoint Migration</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --ink: #111111;
+      --muted: #666666;
+      --line: #d8d8d8;
+      --soft: #f3f3f3;
+      --accent: #cc0000;
+      --radius: 14px;
+      --shadow: 0 8px 26px rgba(0,0,0,.08);
+      --font: Arial, Helvetica, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+    }
+
+    .migration-app {
+      width: min(1500px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    .migration-header {
+      margin-bottom: 20px;
+    }
+
+    .migration-kicker {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .migration-title {
+      margin: 0;
+      max-width: 980px;
+      font-size: clamp(28px, 4vw, 54px);
+      line-height: .98;
+      letter-spacing: -.035em;
+    }
+
+    .migration-dek {
+      margin: 12px 0 0;
+      max-width: 900px;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+
+    .migration-stage {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) 170px minmax(400px, 1.1fr);
+      gap: 0;
+      min-height: 720px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .migration-column {
+      position: relative;
+      z-index: 2;
+      padding: 20px;
+      min-width: 0;
+    }
+
+    .migration-column.source { border-right: 1px solid var(--line); }
+    .migration-column.destination { border-left: 1px solid var(--line); }
+
+    .column-label {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0 14px;
+      background: linear-gradient(var(--panel) 82%, rgba(255,255,255,0));
+    }
+
+    .column-label h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -.01em;
+    }
+
+    .column-label span {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .connector-gutter {
+      position: relative;
+      z-index: 1;
+      background:
+        linear-gradient(90deg, #fafafa, #f3f4f6 50%, #fafafa);
+      border-left: 1px solid #eceef1;
+      border-right: 1px solid #eceef1;
+    }
+
+    .connector-label {
+      position: sticky;
+      top: 14px;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: calc(100% - 24px);
+      margin: 14px 12px 0;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #111;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .connector-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .connector-path {
+      fill: none;
+      stroke: #d7dbe0;
+      stroke-width: 1.5;
+      opacity: .12;
+      transition: stroke .18s ease, opacity .18s ease, stroke-width .18s ease;
+    }
+
+    .connector-path.is-active {
+      stroke: #cc0000;
+      stroke-width: 5;
+      opacity: 1;
+      filter: drop-shadow(0 1px 0 rgba(0,0,0,.08));
+    }
+
+    .connector-arrow {
+      fill: var(--accent);
+      opacity: 1;
+    }
+
+    .repo-group,
+    .dest-group {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      background: #fff;
+    }
+
+    .repo-group::before,
+    .dest-group::before {
+      content: "";
+      display: block;
+      height: 4px;
+      background: #e9ebee;
+    }
+
+    .repo-toggle,
+    .dest-heading {
+      width: 100%;
+      border: 0;
+      color: var(--ink);
+      padding: 13px 14px;
+      text-align: left;
+      font: inherit;
+      font-weight: 800;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .dest-heading:focus-visible,
+    .dest-item:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: -2px;
+    }
+
+    .dest-heading.is-active {
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,.8);
+    }
+
+    .repo-toggle { cursor: pointer; }
+
+    .repo-toggle:hover,
+    .repo-toggle:focus-visible {
+      background: #fafafa;
+      outline: none;
+    }
+
+    .repo-count {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .repo-items {
+      border-top: 1px solid var(--line);
+    }
+
+    .repo-group[data-collapsed="true"] .repo-items { display: none; }
+
+    .source-item,
+    .dest-item {
+      position: relative;
+      border: 0;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+    }
+
+    .source-item {
+      display: block;
+      padding: 11px 12px 11px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f1f3;
+      transition: background .15s ease;
+    }
+
+    .source-item:last-child { border-bottom: 0; }
+
+    .source-item:hover,
+    .source-item:focus-visible {
+      background: #fafafa;
+      outline: none;
+    }
+
+    .source-item.is-active {
+      background: #f5f5f5;
+      outline: 2px solid #111111;
+      outline-offset: -2px;
+    }
+
+    .source-path {
+      min-width: 0;
+      font-size: 13px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+
+    .dest-heading {
+      color: #fff;
+      padding: 12px 14px;
+    }
+
+    .dest-heading { background: #111111; }
+
+    .dest-items {
+      padding: 5px 0;
+    }
+
+    .dest-item {
+      padding: 10px 14px 10px 20px;
+      font-size: 13px;
+      line-height: 1.35;
+      border-bottom: 1px solid #f0f1f3;
+      cursor: pointer;
+    }
+
+    .dest-item:hover {
+      background: #fafafa;
+    }
+
+    .dest-item:last-child { border-bottom: 0; }
+
+    .dest-item.is-active {
+      background: #f5f5f5;
+      font-weight: 900;
+      box-shadow: inset 4px 0 0 #111111;
+    }
+
+    .dest-item::before {
+      content: "";
+      position: absolute;
+      left: 9px;
+      top: 17px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c9cdd2;
+    }
+
+    .dest-item.is-active::before { background: #111111; }
+
+    .migration-detail {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 16px;
+    }
+
+    .detail-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .detail-card h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 8px 12px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .detail-grid dt {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .detail-grid dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .source-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .source-list li {
+      margin: 0 0 5px;
+    }
+
+    .source-list li:last-child {
+      margin-bottom: 0;
+    }
+
+    .rules {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .rules strong { color: var(--ink); }
+
+    .empty-state {
+      padding: 28px 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      .migration-header {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+
+      .migration-stage {
+        grid-template-columns: 1fr;
+      }
+
+      .connector-gutter,
+      .connector-svg {
+        display: none;
+      }
+
+      .migration-column.source,
+      .migration-column.destination {
+        border: 0;
+      }
+
+      .migration-column.destination {
+        border-top: 1px solid var(--line);
+      }
+
+      .migration-detail {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .migration-app {
+        width: min(100% - 18px, 1500px);
+        padding-top: 16px;
+      }
+
+      .migration-column { padding: 13px; }
+
+
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="migration-app" id="migrationApp">
+    <header class="migration-header">
+      <div>
+        <p class="migration-kicker">POLITICO VISUALS</p>
+        <h1 class="migration-title">Box → SharePoint migration</h1>
+        <p class="migration-dek">
+          Click any Box source to isolate its migration path. Click any SharePoint destination to reveal every Box source that moves into it while preserving each individual path line.
+        </p>
+      </div>
+
+    </header>
+
+
+    <section class="migration-stage" aria-label="Interactive migration flowchart">
+      <div class="migration-column source">
+        <div class="column-label">
+          <h2>Box source</h2>
+          <span>Current structure</span>
+        </div>
+        <div id="sourceTree"></div>
+      </div>
+
+      <div class="connector-gutter" aria-hidden="true">
+        <svg class="connector-svg" id="connectorSvg" preserveAspectRatio="none"></svg>
+      </div>
+
+      <div class="migration-column destination">
+        <div class="column-label">
+          <h2>SharePoint destination</h2>
+          <span>Final structure</span>
+        </div>
+        <div id="destinationTree"></div>
+      </div>
+    </section>
+
+    <section class="migration-detail">
+      <div class="detail-card" aria-live="polite">
+        <dl class="detail-grid">
+          <dt>Source</dt><dd id="detailSource">Select a Box folder or SharePoint destination above.</dd>
+          <dt>Destination</dt><dd id="detailDestination">Not selected</dd>
+        </dl>
+      </div>
+
+      <div class="detail-card">
+        <h3>Migration rules</h3>
+        <ul class="rules">
+          <li>Preserve internal folder relationships unless a row explicitly calls for redistribution or consolidation.</li>
+          <li>Anything marked TO BE ARCHIVED / LB APPROVED is handled through IT archival, not the active SharePoint site.</li>
+          <li>New SharePoint areas such as Digital Magazine Covers, Contributors and Breaking - Daily do not need to be backfilled unless specifically identified.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const mappings = [
+      {repo:"Visuals", source:"1. Mainsite Stories / ENTIRE FOLDER", dest:"02 STORIES / Mainsite Stories"},
+      {repo:"Visuals", source:"2. Magazine Stories / ENTIRE FOLDER", dest:"02 STORIES / Magazine Stories"},
+      {repo:"Visuals", source:"3. A1 Stories / Published", dest:"04 VISUAL ARCHIVE / Newspaper Archive / A1 Stories / Published"},
+
+      {repo:"Visuals", source:"4. Series / Playbook", dest:"02 STORIES / Series / Playbook"},
+      {repo:"Visuals", source:"4. Series / Road Trip", dest:"02 STORIES / Series / Road Trip"},
+      {repo:"Visuals", source:"4. Series / Women Rule", dest:"02 STORIES / Series / Women Rule"},
+      {repo:"Visuals", source:"4. Series / Published", dest:"02 STORIES / Series / Published"},
+      {repo:"Visuals", source:"4. Series / Inactive Folders", dest:"04 VISUAL ARCHIVE / Historical Projects / Inactive Series"},
+
+      {repo:"Visuals", source:"5. Packages / POLITICO 50", dest:"02 STORIES / Packages / POLITICO 50"},
+      {repo:"Visuals", source:"5. Packages / War Issue", dest:"02 STORIES / Packages / War Issue"},
+      {repo:"Visuals", source:"5. Packages / Published Killed", dest:"04 VISUAL ARCHIVE / Historical Projects / Published-Killed Packages"},
+
+      {repo:"Visuals", source:"6. Continuing Coverage / Epstein Files", dest:"01 NEWSROOM / Continuing Coverage / Epstein Files"},
+      {repo:"Visuals", source:"6. Continuing Coverage / World Cup 2026", dest:"01 NEWSROOM / Continuing Coverage / World Cup 2026"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Obits", dest:"01 NEWSROOM / Continuing Coverage / Obits"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Newsletters", dest:"01 NEWSROOM / Continuing Coverage / Newsletters"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Columns", dest:"01 NEWSROOM / Continuing Coverage / Columns"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Clintons", dest:"01 NEWSROOM / Continuing Coverage / Clintons"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Main.BlancheBondi", dest:"01 NEWSROOM / Continuing Coverage / Main.BlancheBondi"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Published", dest:"01 NEWSROOM / Continuing Coverage / Published"},
+      {repo:"Visuals", source:"6. Continuing Coverage / 2024 Elections", dest:"04 VISUAL ARCHIVE / Historical Projects / 2024 Elections"},
+      {repo:"Visuals", source:"6. Continuing Coverage / The Fifty", dest:"04 VISUAL ARCHIVE / Historical Projects / The Fifty"},
+      {repo:"Visuals", source:"6. Continuing Coverage / State Legislatures", dest:"04 VISUAL ARCHIVE / Historical Projects / State Legislatures"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Podcasts", dest:"04 VISUAL ARCHIVE / Historical Projects / Podcasts"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Style Inventory", dest:"06 TEAM RESOURCES / Visual Standards / Style Inventory"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Video", dest:"06 TEAM RESOURCES / Production Resources / Video"},
+      {repo:"Visuals", source:"6. Continuing Coverage / Marketing", dest:"06 TEAM RESOURCES / Production Resources / Marketing"},
+
+      {repo:"Visuals", source:"7. Resources / 55 Things Templates", dest:"06 TEAM RESOURCES / Templates / 55 Things Templates"},
+      {repo:"Visuals", source:"7. Resources / AI Image template", dest:"06 TEAM RESOURCES / Templates / AI Image template"},
+      {repo:"Visuals", source:"7. Resources / Art plan template", dest:"06 TEAM RESOURCES / Templates / Art plan template"},
+      {repo:"Visuals", source:"7. Resources / Circle mugs", dest:"06 TEAM RESOURCES / Templates / Circle mugs"},
+      {repo:"Visuals", source:"7. Resources / Cutout Headshots", dest:"06 TEAM RESOURCES / Templates / Cutout Headshots"},
+      {repo:"Visuals", source:"7. Resources / docs template", dest:"06 TEAM RESOURCES / Templates / docs template"},
+      {repo:"Visuals", source:"7. Resources / Folder Structure Documentation", dest:"06 TEAM RESOURCES / Training and Documentation / Folder Structure Documentation"},
+      {repo:"Visuals", source:"7. Resources / Fonts", dest:"06 TEAM RESOURCES / Production Resources / Fonts"},
+      {repo:"Visuals", source:"7. Resources / Grayscale Toning", dest:"06 TEAM RESOURCES / Production Resources / Grayscale Toning"},
+      {repo:"Visuals", source:"7. Resources / Homepage Diptych Template", dest:"06 TEAM RESOURCES / Templates / Homepage Diptych Template"},
+      {repo:"Visuals", source:"7. Resources / homepage vertical template", dest:"06 TEAM RESOURCES / Templates / homepage vertical template"},
+      {repo:"Visuals", source:"7. Resources / homepage vertical template drop shadow", dest:"06 TEAM RESOURCES / Templates / homepage vertical template drop shadow"},
+      {repo:"Visuals", source:"7. Resources / Illo 2.0 Template", dest:"06 TEAM RESOURCES / Templates / Illo 2.0 Template"},
+      {repo:"Visuals", source:"7. Resources / Illo Classic Templates", dest:"06 TEAM RESOURCES / Templates / Illo Classic Templates"},
+      {repo:"Visuals", source:"7. Resources / illo library", dest:"06 TEAM RESOURCES / Production Resources / illo library"},
+      {repo:"Visuals", source:"7. Resources / newsletter vertical template", dest:"06 TEAM RESOURCES / Templates / newsletter vertical template"},
+      {repo:"Visuals", source:"7. Resources / Obit photo research", dest:"06 TEAM RESOURCES / Assignment Resources / Obit photo research"},
+      {repo:"Visuals", source:"7. Resources / Office Art Ideas", dest:"06 TEAM RESOURCES / Production Resources / Office Art Ideas"},
+      {repo:"Visuals", source:"7. Resources / Photo grids", dest:"06 TEAM RESOURCES / Templates / Photo grids"},
+      {repo:"Visuals", source:"7. Resources / Photo Tutorials for Editors", dest:"06 TEAM RESOURCES / Training and Documentation / Photo Tutorials for Editors"},
+      {repo:"Visuals", source:"7. Resources / Politico Logos", dest:"06 TEAM RESOURCES / Production Resources / Politico Logos"},
+      {repo:"Visuals", source:"7. Resources / POLITICO_LETTERHEAD.docx", dest:"06 TEAM RESOURCES / Templates / POLITICO Letterhead"},
+      {repo:"Visuals", source:"7. Resources / POLITICO_LETTERHEAD.pdf", dest:"06 TEAM RESOURCES / Templates / POLITICO Letterhead"},
+      {repo:"Visuals", source:"7. Resources / Roundtable Mugs", dest:"06 TEAM RESOURCES / Templates / Roundtable Mugs"},
+      {repo:"Visuals", source:"7. Resources / Roundup mockups", dest:"06 TEAM RESOURCES / Templates / Roundup mockups"},
+      {repo:"Visuals", source:"7. Resources / Social Templates", dest:"06 TEAM RESOURCES / Templates / Social Templates"},
+      {repo:"Visuals", source:"7. Resources / Standardized design elements", dest:"06 TEAM RESOURCES / Visual Standards / Standardized design elements"},
+      {repo:"Visuals", source:"7. Resources / Stock art", dest:"06 TEAM RESOURCES / Production Resources / Stock art"},
+      {repo:"Visuals", source:"7. Resources / TFC template", dest:"06 TEAM RESOURCES / Templates / TFC template"},
+      {repo:"Visuals", source:"7. Resources / Tweet template", dest:"06 TEAM RESOURCES / Templates / Tweet template"},
+
+      {repo:"Visuals", source:"8. Freelancers", dest:"07 INTERNAL / Contracts / Freelancers"},
+      {repo:"Visuals", source:"9. Personal Folders", dest:"06 TEAM RESOURCES / Production Resources / Legacy Personal Folders"},
+      {repo:"Visuals", source:"10. Archives / Past Series", dest:"04 VISUAL ARCHIVE / Historical Projects / Past Series"},
+      {repo:"Visuals", source:"10. Archives / 2020 SND Award Entries", dest:"04 VISUAL ARCHIVE / Historical Projects / 2020 SND Award Entries"},
+      {repo:"Visuals", source:"11. Unpublished Stories", dest:"02 STORIES / Unpublished Stories"},
+
+      {repo:"Visuals", source:"12. Photography / Francis Chung", dest:"03 PHOTOGRAPHY / Staff Photography / Francis Chung"},
+      {repo:"Photographer", source:"Francis Chung", dest:"03 PHOTOGRAPHY / Staff Photography / Francis Chung"},
+      {repo:"Visuals", source:"12. Photography / Scott Mahaskey and John Shinkle 2008-2021", dest:"04 VISUAL ARCHIVE / POLITICO Photo Archive / Scott Mahaskey and John Shinkle 2008-2021"},
+      {repo:"Visuals", source:"12. Photography / ISP White House Pool Photos", dest:"04 VISUAL ARCHIVE / POLITICO Photo Archive / ISP White House Pool Photos"},
+      {repo:"Visuals", source:"12. Photography / Freelancers", dest:"04 VISUAL ARCHIVE / POLITICO Photo Archive / Freelancers"},
+      {repo:"Visuals", source:"12. Photography / 2024 Election", dest:"04 VISUAL ARCHIVE / POLITICO Photo Archive / 2024 Election"},
+      {repo:"Visuals", source:"12. Photography / 2025 Election", dest:"04 VISUAL ARCHIVE / POLITICO Photo Archive / 2025 Election"},
+      {repo:"Visuals", source:"12. Photography / Angelina Katsanis", dest:"04 VISUAL ARCHIVE / POLITICO Photo Archive / Angelina Katsanis"},
+      {repo:"Visuals", source:"12. Photography / Politico at Work", dest:"04 VISUAL ARCHIVE / POLITICO Photo Archive / Politico at Work"},
+
+      {repo:"Visuals", source:"FOLDER TEMPLATE - DATE.SLUG.AuthorName.Topic", dest:"06 TEAM RESOURCES / Templates / Story Folder Template"},
+
+      {repo:"Editorial Graphics", source:"EE-Illustrations-Maps-Graphics", dest:"04 VISUAL ARCHIVE / Historical Projects / Editorial Graphics / EE-Illustrations-Maps-Graphics"},
+      {repo:"Editorial Graphics", source:"Brown Bag and Reporter Orientation", dest:"06 TEAM RESOURCES / Training and Documentation / Brown Bag and Reporter Orientation"},
+      {repo:"Editorial Graphics", source:"Artisan Charts Maps", dest:"06 TEAM RESOURCES / Production Resources / Artisan Charts Maps"},
+      {repo:"Editorial Graphics", source:"Image and Photo Templates", dest:"06 TEAM RESOURCES / Templates / Image and Photo Templates"},
+      {repo:"Editorial Graphics", source:"Cartoon Carousel Template", dest:"06 TEAM RESOURCES / Templates / Cartoon Carousel Template"},
+      {repo:"Editorial Graphics", source:"EE-SpecialSeries", dest:"04 VISUAL ARCHIVE / Historical Projects / Editorial Graphics / EE-SpecialSeries"},
+      {repo:"Editorial Graphics", source:"TO BE ARCHIVED - LB APPROVED", dest:"IT ARCHIVE"},
+      {repo:"Editorial Graphics", source:"Downloads.lnk", dest:"DO NOT MIGRATE"},
+
+      {repo:"Production", source:"Newspaper Archive", dest:"04 VISUAL ARCHIVE / Newspaper Archive"},
+      {repo:"Production", source:"TO BE ARCHIVED Advertising Archive", dest:"IT ARCHIVE"}
+    ];
+
+    const libraries = [
+      ["01 NEWSROOM",["Breaking - Daily","Continuing Coverage","Current Projects","Upcoming"]],
+      ["02 STORIES",["Magazine Stories","Mainsite Stories","Packages","Series","Unpublished Stories"]],
+      ["03 PHOTOGRAPHY",["Assignments","Events","Features","Portraits - Headshots","Staff Photography"]],
+      ["04 VISUAL ARCHIVE",["Digital Magazine Covers","Historical Projects","Magazine Archive","Newspaper Archive","POLITICO Photo Archive"]],
+      ["05 CONTRIBUTORS",["Designers","Illustrators","Other Freelancers","Photographers"]],
+      ["06 TEAM RESOURCES",["Assignment Resources","Production Resources","Templates","Training and Documentation","Visual Standards"]],
+      ["07 INTERNAL",["Administrative","Budgets","Contracts","Rates"]]
+    ];
+
+    const sourceTree = document.getElementById("sourceTree");
+    const destinationTree = document.getElementById("destinationTree");
+    const svg = document.getElementById("connectorSvg");
+    const app = document.getElementById("migrationApp");
+    let activeIndex = -1;
+    let activeDestination = null;
+    let activeIndices = new Set();
+
+    const esc = (s) => String(s).replace(/[&<>"']/g, ch => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[ch]));
+
+    function visibleMappings() {
+      return mappings.map((m, i) => ({...m, i}));
+    }
+
+    function renderSources() {
+      const rows = visibleMappings();
+      const repos = [...new Set(rows.map(r => r.repo))];
+
+      sourceTree.innerHTML = repos.map(repo => {
+        const items = rows.filter(r => r.repo === repo);
+        return `
+          <section class="repo-group" data-repo="${esc(repo)}" data-collapsed="false">
+            <button class="repo-toggle" type="button" aria-expanded="true">
+              <span>${esc(repo)}</span>
+              <span class="repo-count">${items.length} mappings</span>
+            </button>
+            <div class="repo-items">
+              ${items.map(m => `
+                <button class="source-item ${activeIndices.has(m.i) ? "is-active" : ""}"
+                  type="button"
+                  data-index="${m.i}">
+                  <span class="source-path">${esc(m.source)}</span>
+                </button>
+              `).join("")}
+            </div>
+          </section>
+        `;
+      }).join("") || `<div class="empty-state">No mappings available.</div>`;
+
+      sourceTree.querySelectorAll(".repo-toggle").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const group = btn.closest(".repo-group");
+          const collapsed = group.dataset.collapsed === "true";
+          group.dataset.collapsed = String(!collapsed);
+          btn.setAttribute("aria-expanded", String(collapsed));
+          requestAnimationFrame(drawConnectors);
+        });
+      });
+
+      sourceTree.querySelectorAll(".source-item").forEach(btn => {
+        btn.addEventListener("click", () => selectMapping(Number(btn.dataset.index)));
+      });
+    }
+
+    function renderDestinations() {
+      destinationTree.innerHTML = libraries.map(([name, subs]) => {
+        const libraryActive = activeDestination === name;
+        return `
+          <section class="dest-group">
+            <button class="dest-heading ${libraryActive ? "is-active" : ""}" type="button" data-library="${esc(name)}">
+              <span>${esc(name)}</span>
+            </button>
+            <div class="dest-items">
+              ${subs.map(sub => {
+                const key = `${name} / ${sub}`;
+                const active = activeDestination === key;
+                return `<button class="dest-item ${active ? "is-active" : ""}" type="button" data-dest="${esc(key)}">${esc(sub)}</button>`;
+              }).join("")}
+            </div>
+          </section>
+        `;
+      }).join("") + `
+        <section class="dest-group">
+          <button class="dest-heading ${activeDestination === "IT / NON-ACTIVE DESTINATIONS" ? "is-active" : ""}" type="button" data-library="IT / NON-ACTIVE DESTINATIONS">
+            <span>IT / NON-ACTIVE DESTINATIONS</span>
+          </button>
+          <div class="dest-items">
+            <button class="dest-item ${activeDestination === "IT ARCHIVE" ? "is-active" : ""}" type="button" data-dest="IT ARCHIVE">IT ARCHIVE</button>
+            <button class="dest-item ${activeDestination === "DO NOT MIGRATE" ? "is-active" : ""}" type="button" data-dest="DO NOT MIGRATE">DO NOT MIGRATE</button>
+          </div>
+        </section>
+      `;
+
+      destinationTree.querySelectorAll("[data-dest]").forEach(btn => {
+        btn.addEventListener("click", () => selectDestination(btn.dataset.dest));
+      });
+
+      destinationTree.querySelectorAll("[data-library]").forEach(btn => {
+        btn.addEventListener("click", () => selectDestination(btn.dataset.library, true));
+      });
+    }
+
+    function destinationAnchor(dest) {
+      const nodes = [...destinationTree.querySelectorAll(".dest-item")];
+      if (dest === "IT ARCHIVE" || dest === "DO NOT MIGRATE") {
+        return nodes.find(n => n.dataset.dest === dest);
+      }
+      const libraryMatch = libraries
+        .flatMap(([name,subs]) => subs.map(sub => `${name} / ${sub}`))
+        .filter(key => dest.startsWith(key))
+        .sort((a,b) => b.length - a.length)[0];
+      return nodes.find(n => n.dataset.dest === libraryMatch);
+    }
+
+    function drawConnectors() {
+      if (window.matchMedia("(max-width: 980px)").matches) {
+        svg.innerHTML = "";
+        return;
+      }
+
+      const gutterRect = svg.getBoundingClientRect();
+      const rows = visibleMappings();
+      svg.setAttribute("viewBox", `0 0 ${gutterRect.width} ${gutterRect.height}`);
+      svg.innerHTML = "";
+
+      rows.forEach(m => {
+        const source = sourceTree.querySelector(`.source-item[data-index="${m.i}"]`);
+        const dest = destinationAnchor(m.dest);
+        if (!source || !dest || source.offsetParent === null || dest.offsetParent === null) return;
+
+        const s = source.getBoundingClientRect();
+        const d = dest.getBoundingClientRect();
+
+        const x1 = 6;
+        const y1 = s.top + s.height / 2 - gutterRect.top;
+        const x2 = gutterRect.width - 10;
+        const y2 = d.top + d.height / 2 - gutterRect.top;
+        const bend = gutterRect.width * .50;
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${x1} ${y1} C ${bend} ${y1}, ${gutterRect.width-bend} ${y2}, ${x2} ${y2}`);
+        path.setAttribute("class", `connector-path ${activeIndices.has(m.i) ? "is-active" : ""}`);
+        path.dataset.index = m.i;
+        svg.appendChild(path);
+      });
+    }
+
+    function setDetailSources(indices) {
+      const sourceEl = document.getElementById("detailSource");
+      if (!indices.length) {
+        sourceEl.textContent = "Select a Box folder or SharePoint destination above.";
+        return;
+      }
+      if (indices.length === 1) {
+        const m = mappings[indices[0]];
+        sourceEl.textContent = `${m.repo} / ${m.source}`;
+        return;
+      }
+      const ul = document.createElement("ul");
+      ul.className = "source-list";
+      indices.forEach(i => {
+        const li = document.createElement("li");
+        li.textContent = `${mappings[i].repo} / ${mappings[i].source}`;
+        ul.appendChild(li);
+      });
+      sourceEl.replaceChildren(ul);
+    }
+
+    function selectMapping(index) {
+      activeIndex = index;
+      activeDestination = null;
+      activeIndices = new Set([index]);
+      const m = mappings[index];
+
+      sourceTree.querySelectorAll(".source-item").forEach(el =>
+        el.classList.toggle("is-active", activeIndices.has(Number(el.dataset.index)))
+      );
+
+      renderDestinations();
+
+      setDetailSources([index]);
+      document.getElementById("detailDestination").textContent = m.dest;
+
+      requestAnimationFrame(drawConnectors);
+    }
+
+    function selectDestination(key, isLibrary = false) {
+      activeIndex = -1;
+      activeDestination = key;
+
+      let matches = visibleMappings().filter(m => {
+        if (key === "IT / NON-ACTIVE DESTINATIONS") {
+          return m.dest === "IT ARCHIVE" || m.dest === "DO NOT MIGRATE";
+        }
+        return isLibrary ? m.dest.startsWith(key + " /") || m.dest === key : m.dest.startsWith(key);
+      });
+
+      activeIndices = new Set(matches.map(m => m.i));
+
+      sourceTree.querySelectorAll(".source-item").forEach(el =>
+        el.classList.toggle("is-active", activeIndices.has(Number(el.dataset.index)))
+      );
+
+      renderDestinations();
+
+      setDetailSources(matches.map(m => m.i));
+      document.getElementById("detailDestination").textContent = key;
+
+
+      requestAnimationFrame(drawConnectors);
+    }
+
+    const ro = new ResizeObserver(() => requestAnimationFrame(drawConnectors));
+    ro.observe(app);
+    window.addEventListener("resize", () => requestAnimationFrame(drawConnectors));
+
+    renderSources();
+    renderDestinations();
+    if (activeIndices.size === 0 && visibleMappings().length) {
+      selectMapping(visibleMappings()[0].i);
+    } else {
+      requestAnimationFrame(drawConnectors);
+    }
+  })();
+  </script>
+</body>
+</html>
