@@ -322,7 +322,7 @@
     .migration-detail {
       margin-top: 18px;
       display: grid;
-      grid-template-columns: .9fr 1.1fr;
+      grid-template-columns: 1fr;
       gap: 16px;
     }
 
@@ -475,14 +475,6 @@
         </dl>
       </div>
 
-      <div class="detail-card">
-        <h3>Migration rules</h3>
-        <ul class="rules">
-          <li>Preserve internal folder relationships unless a row explicitly calls for redistribution or consolidation.</li>
-          <li>Anything marked TO BE ARCHIVED / LB APPROVED is handled through IT archival, not the active SharePoint site.</li>
-          <li>New SharePoint areas such as Digital Magazine Covers, Contributors and Breaking - Daily do not need to be backfilled unless specifically identified.</li>
-        </ul>
-      </div>
     </section>
   </main>
 
@@ -576,11 +568,8 @@
       {repo:"Editorial Graphics", source:"Image and Photo Templates", dest:"06 TEAM RESOURCES / Templates / Image and Photo Templates"},
       {repo:"Editorial Graphics", source:"Cartoon Carousel Template", dest:"06 TEAM RESOURCES / Templates / Cartoon Carousel Template"},
       {repo:"Editorial Graphics", source:"EE-SpecialSeries", dest:"04 VISUAL ARCHIVE / Historical Projects / Editorial Graphics / EE-SpecialSeries"},
-      {repo:"Editorial Graphics", source:"TO BE ARCHIVED - LB APPROVED", dest:"IT ARCHIVE"},
-      {repo:"Editorial Graphics", source:"Downloads.lnk", dest:"DO NOT MIGRATE"},
 
       {repo:"Production", source:"Newspaper Archive", dest:"04 VISUAL ARCHIVE / Newspaper Archive"},
-      {repo:"Production", source:"TO BE ARCHIVED Advertising Archive", dest:"IT ARCHIVE"}
     ];
 
     const libraries = [
@@ -667,15 +656,6 @@
           </section>
         `;
       }).join("") + `
-        <section class="dest-group">
-          <button class="dest-heading ${activeDestination === "IT / NON-ACTIVE DESTINATIONS" ? "is-active" : ""}" type="button" data-library="IT / NON-ACTIVE DESTINATIONS">
-            <span>IT / NON-ACTIVE DESTINATIONS</span>
-          </button>
-          <div class="dest-items">
-            <button class="dest-item ${activeDestination === "IT ARCHIVE" ? "is-active" : ""}" type="button" data-dest="IT ARCHIVE">IT ARCHIVE</button>
-            <button class="dest-item ${activeDestination === "DO NOT MIGRATE" ? "is-active" : ""}" type="button" data-dest="DO NOT MIGRATE">DO NOT MIGRATE</button>
-          </div>
-        </section>
       `;
 
       destinationTree.querySelectorAll("[data-dest]").forEach(btn => {
@@ -776,9 +756,6 @@
       activeDestination = key;
 
       let matches = visibleMappings().filter(m => {
-        if (key === "IT / NON-ACTIVE DESTINATIONS") {
-          return m.dest === "IT ARCHIVE" || m.dest === "DO NOT MIGRATE";
-        }
         return isLibrary ? m.dest.startsWith(key + " /") || m.dest === key : m.dest.startsWith(key);
       });
 
